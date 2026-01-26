@@ -1,0 +1,79 @@
+.robo {
+  width: 200px;
+  height: 200px;
+  background: #222;
+  border-radius: 20px;
+  margin: auto;
+  padding-top: 40px;
+}
+
+.olhos {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+}
+
+.olhos span {
+  width: 20px;
+  height: 20px;
+  background: #0ff;
+  border-radius: 50%;
+}
+
+.boca {
+  width: 60px;
+  height: 10px;
+  background: #0ff;
+  margin: auto;
+  border-radius: 10px;
+  transition: height 0.1s;
+}
+
+.boca.falando {
+  animation: falar 0.2s infinite alternate;
+}
+
+@keyframes falar {
+  from {
+    height: 10px;
+  }
+
+  to {
+    height: 30px;
+  }
+}
+
+.robo {
+  width: 200px;
+  height: 200px;
+  background: #222;
+  border-radius: 20px;
+  margin: auto;
+  padding-top: 40px;
+  transition: box-shadow 0.3s;
+}
+
+.robo.ouvindo {
+  box-shadow: 0 0 20px #0ff;
+}
+
+.olhos {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+}
+
+.olhos span {
+  width: 20px;
+  height: 20px;
+  background: #0ff;
+  border-radius: 50%;
+}
+
+.boca {
+  width: 60px;
+  height: 10px;
+  background: #0ff;
+  margin: auto;
+  border-radius: 10px;
+}
