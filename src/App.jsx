@@ -3,6 +3,8 @@ import { Canvas } from "@react-three/fiber";
 import Avatar from "./Avatar.jsx";
 import "./App.css";
 
+const URL_SERVIDOR = "https://servidor-robo-ia.onrender.com/responder";
+
 function App() {
   const [falando, setFalando] = useState(false);
   const [escutando, setEscutando] = useState(false);
@@ -24,7 +26,6 @@ function App() {
     "leticia", "rafaela", "aline", "bruna", "daniela", "isabela", "sofia"
   ];
 
-  // 🔑 gênero calculado uma vez
   const genero = useMemo(() => {
     if (!nomeIA) return "masculino";
     const nome = nomeIA.toLowerCase();
@@ -34,7 +35,7 @@ function App() {
     return "masculino";
   }, [nomeIA]);
 
-  // carregar vozes
+  // 🎙️ carregar vozes
   useEffect(() => {
     const loadVoices = () => {
       voicesRef.current = window.speechSynthesis.getVoices();
@@ -43,7 +44,7 @@ function App() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // setup reconhecimento de voz (SEM iniciar automático)
+  // 🎧 setup reconhecimento de voz
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -55,42 +56,55 @@ function App() {
 
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.continuous = false; // 👈 uma frase só
+    recognition.continuous = true; // ✅ importante
     recognition.interimResults = false;
 
     recognition.onresult = async (event) => {
-      const texto = event.results[0][0].transcript;
+      const texto =
+        event.results[event.results.length - 1][0].transcript;
+
+      console.log("🎧 Você disse:", texto);
       setEscutando(false);
 
       try {
-        const response = await fetch(
-          "https://servidor-robo-ia.onrender.com/responder",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ texto, nomeIA }),
-          }
-        );
+        const response = await fetch(URL_SERVIDOR, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texto, nomeIA }),
+        });
 
         const data = await response.json();
         if (data.resposta) {
           falar(data.resposta);
         }
       } catch (err) {
-        console.error("Erro ao falar com backend", err);
+        console.error("❌ Erro backend:", err);
       }
     };
 
-    recognition.onerror = () => setEscutando(false);
-    recognition.onend = () => setEscutando(false);
+    recognition.onerror = (e) => {
+      console.error("Erro reconhecimento:", e);
+      setEscutando(false);
+    };
+
+    recognition.onend = () => {
+      if (nomeFixado && !falando) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+            setEscutando(true);
+          } catch { }
+        }, 500);
+      }
+    };
 
     recognitionRef.current = recognition;
-  }, [nomeIA]);
+  }, [nomeIA, nomeFixado, falando]);
 
   const iniciarEscuta = () => {
     if (!nomeFixado || falando || escutando) return;
-    setEscutando(true);
     recognitionRef.current.start();
+    setEscutando(true);
   };
 
   const fixarNome = () => {
@@ -101,6 +115,8 @@ function App() {
 
   const falar = (texto) => {
     const synth = window.speechSynthesis;
+    synth.cancel(); // 🔥 evita travar
+
     const utterance = new SpeechSynthesisUtterance(texto);
     utterance.lang = "pt-BR";
 
@@ -109,11 +125,11 @@ function App() {
     );
 
     const vozFeminina = vozesPT.find(v =>
-      /female|feminina|google português/i.test(v.name)
+      /female|feminina|google/i.test(v.name)
     );
 
     const vozMasculina = vozesPT.find(v =>
-      /male|masculina/i.test(v.name)
+      /male|masculina|google/i.test(v.name)
     );
 
     utterance.voice =
@@ -122,7 +138,10 @@ function App() {
         : vozMasculina || vozesPT[0];
 
     utterance.onstart = () => setFalando(true);
-    utterance.onend = () => setFalando(false);
+    utterance.onend = () => {
+      setFalando(false);
+      iniciarEscuta(); // 🔁 volta a ouvir sozinho
+    };
 
     synth.speak(utterance);
   };
@@ -150,7 +169,7 @@ function App() {
       </Canvas>
 
       {nomeFixado && (
-        <button onClick={iniciarEscuta} disabled={escutando || falando}>
+        <button onClick={iniciarEscuta}>
           {escutando ? "🎙️ Ouvindo..." : "🎤 Falar com o robô"}
         </button>
       )}
