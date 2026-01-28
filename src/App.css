@@ -79,3 +79,29 @@ button {
 .robo.falando .boca {
     height: 28px;
 }
+
+.robo-flutuante {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 42px;
+    cursor: pointer;
+    z-index: 999;
+}
+
+.painel {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    background: #111;
+    color: #fff;
+    padding: 12px;
+    width: 240px;
+    border-radius: 10px;
+}
+
+.painel input,
+.painel textarea {
+    width: 100%;
+    margin-bottom: 6px;
+}
