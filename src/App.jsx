@@ -5,6 +5,7 @@ import "./App.css";
 
 function App() {
   const [falando, setFalando] = useState(false);
+  const [escutando, setEscutando] = useState(false);
 
   const [nomeIA, setNomeIA] = useState(() => {
     return localStorage.getItem("nomeIA") || "";
@@ -23,19 +24,13 @@ function App() {
     "leticia", "rafaela", "aline", "bruna", "daniela", "isabela", "sofia"
   ];
 
-  // 🔑 GÊNERO DEFINIDO UMA ÚNICA VEZ
+  // 🔑 gênero calculado uma vez
   const genero = useMemo(() => {
     if (!nomeIA) return "masculino";
-
     const nome = nomeIA.toLowerCase();
-
-    if (
-      nomesFemininos.some(n => nome.includes(n)) ||
-      nome.endsWith("a")
-    ) {
+    if (nomesFemininos.some(n => nome.includes(n)) || nome.endsWith("a")) {
       return "feminino";
     }
-
     return "masculino";
   }, [nomeIA]);
 
@@ -48,7 +43,7 @@ function App() {
     window.speechSynthesis.onvoiceschanged = loadVoices;
   }, []);
 
-  // reconhecimento de voz
+  // setup reconhecimento de voz (SEM iniciar automático)
   useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -60,21 +55,22 @@ function App() {
 
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.continuous = true;
+    recognition.continuous = false; // 👈 uma frase só
     recognition.interimResults = false;
 
     recognition.onresult = async (event) => {
-      if (falando || !nomeFixado) return;
-
-      const texto =
-        event.results[event.results.length - 1][0].transcript;
+      const texto = event.results[0][0].transcript;
+      setEscutando(false);
 
       try {
-        const response = await fetch("https://servidor-robo-ia.onrender.com/responder", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texto, nomeIA }),
-        });
+        const response = await fetch(
+          "https://servidor-robo-ia.onrender.com/responder",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ texto, nomeIA }),
+          }
+        );
 
         const data = await response.json();
         if (data.resposta) {
@@ -85,11 +81,17 @@ function App() {
       }
     };
 
-    recognition.start();
-    recognitionRef.current = recognition;
+    recognition.onerror = () => setEscutando(false);
+    recognition.onend = () => setEscutando(false);
 
-    return () => recognition.stop();
-  }, [falando, nomeFixado, nomeIA]);
+    recognitionRef.current = recognition;
+  }, [nomeIA]);
+
+  const iniciarEscuta = () => {
+    if (!nomeFixado || falando || escutando) return;
+    setEscutando(true);
+    recognitionRef.current.start();
+  };
 
   const fixarNome = () => {
     if (!nomeIA.trim()) return;
@@ -147,7 +149,11 @@ function App() {
         <Avatar falando={falando} genero={genero} />
       </Canvas>
 
-      <p>🎙️ Ouvindo você...</p>
+      {nomeFixado && (
+        <button onClick={iniciarEscuta} disabled={escutando || falando}>
+          {escutando ? "🎙️ Ouvindo..." : "🎤 Falar com o robô"}
+        </button>
+      )}
     </div>
   );
 }
