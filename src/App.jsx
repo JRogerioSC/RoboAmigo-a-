@@ -64,8 +64,19 @@ function App() {
       });
 
       const data = await res.json();
-      if (data.resposta) falar(data.resposta);
+
+      if (data.resposta) {
+        falar(data.resposta);
+      }
+
+      // 🔥 SE O ROBÔ NÃO SABER, ABRE O PAINEL PARA ENSINAR
+      if (data.aprender) {
+        setPergunta(texto);
+        setMostrarPainel(true);
+      }
     };
+
+
 
     r.onend = () => {
       if (nomeFixado && !falando) {
