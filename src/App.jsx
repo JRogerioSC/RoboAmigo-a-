@@ -6,7 +6,19 @@ import "./App.css";
 const URL_SERVIDOR = "https://servidor-robo-ia.onrender.com/responder";
 const URL_TREINAR = "https://servidor-robo-ia.onrender.com/treinar";
 
+// 🔐 ID ÚNICO POR USUÁRIO
+const getUsuarioId = () => {
+  let id = localStorage.getItem("usuarioId");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("usuarioId", id);
+  }
+  return id;
+};
+
 function App() {
+  const usuarioId = useRef(getUsuarioId());
+
   const [falando, setFalando] = useState(false);
   const [escutando, setEscutando] = useState(false);
 
@@ -15,6 +27,10 @@ function App() {
 
   const [mostrarPainel, setMostrarPainel] = useState(false);
   const [senha, setSenha] = useState("");
+  const [autorizado, setAutorizado] = useState(
+    localStorage.getItem("painel") === "ok"
+  );
+
   const [pergunta, setPergunta] = useState("");
   const [respostaManual, setRespostaManual] = useState("");
 
@@ -60,23 +76,17 @@ function App() {
       const res = await fetch(URL_SERVIDOR, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texto })
+        body: JSON.stringify({
+          texto,
+          usuarioId: usuarioId.current
+        })
       });
 
       const data = await res.json();
 
-      if (data.resposta) {
-        falar(data.resposta);
-      }
+      if (data.resposta) falar(data.resposta);
 
-      // 🔥 SE O ROBÔ NÃO SABER, ABRE O PAINEL PARA ENSINAR
-      if (data.aprender) {
-        setPergunta(texto);
-        setMostrarPainel(true);
-      }
     };
-
-
 
     r.onend = () => {
       if (nomeFixado && !falando) {
@@ -101,10 +111,14 @@ function App() {
     u.lang = "pt-BR";
 
     const pt = voicesRef.current.filter(v => v.lang.includes("pt"));
-    u.voice = genero === "feminino" ? pt.find(v => /female/i.test(v.name)) || pt[0] : pt[0];
+    u.voice =
+      genero === "feminino"
+        ? pt.find(v => /female|mulher/i.test(v.name)) || pt[0]
+        : pt[0];
 
     u.onstart = () => setFalando(true);
     u.onend = () => { setFalando(false); iniciarEscuta(); };
+
     speechSynthesis.speak(u);
   };
 
@@ -118,7 +132,9 @@ function App() {
     <div className="container">
       <h2>Nome do amigo(a)</h2>
 
-      <input value={nomeIA} disabled={nomeFixado} onChange={e => setNomeIA(e.target.value)} />
+      <input value={nomeIA} disabled={nomeFixado}
+        onChange={e => setNomeIA(e.target.value)} />
+
       {!nomeFixado && <button onClick={fixarNome}>Confirmar nome</button>}
       {nomeFixado && <p>✅ Nome fixado: {nomeIA}</p>}
 
@@ -134,33 +150,49 @@ function App() {
         </button>
       )}
 
-      {/* 🤖 Robo flutuante */}
       <div className="robo-flutuante" onClick={() => setMostrarPainel(true)}>🤖</div>
 
       {mostrarPainel && (
         <div className="painel">
-          {!localStorage.getItem("painel") ? (
+          {!autorizado ? (
             <>
-              <input type="password" placeholder="Senha" value={senha} onChange={e => setSenha(e.target.value)} />
+              <input type="password" placeholder="Senha"
+                value={senha} onChange={e => setSenha(e.target.value)} />
               <button onClick={() => {
-                if (senha === "689033rogerio") localStorage.setItem("painel", "ok");
-                else alert("Senha errada");
+                if (senha === "689033rogerio") {
+                  localStorage.setItem("painel", "ok");
+                  setAutorizado(true);
+                  setSenha("");
+                } else alert("Senha errada");
               }}>Entrar</button>
             </>
           ) : (
             <>
-              <input placeholder="Pergunta" value={pergunta} onChange={e => setPergunta(e.target.value)} />
-              <textarea placeholder="Resposta" value={respostaManual} onChange={e => setRespostaManual(e.target.value)} />
+              <input placeholder="Pergunta"
+                value={pergunta} onChange={e => setPergunta(e.target.value)} />
+              <textarea placeholder="Resposta"
+                value={respostaManual} onChange={e => setRespostaManual(e.target.value)} />
+
               <button onClick={async () => {
                 await fetch(URL_TREINAR, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ pergunta, resposta: respostaManual })
+                  body: JSON.stringify({
+                    usuarioId: usuarioId.current,
+                    pergunta,
+                    resposta: respostaManual
+                  })
                 });
-                setPergunta(""); setRespostaManual("");
+                setPergunta("");
+                setRespostaManual("");
                 alert("Treinado!");
               }}>Salvar</button>
-              <button onClick={() => { localStorage.removeItem("painel"); setMostrarPainel(false) }}>Fechar</button>
+
+              <button onClick={() => {
+                localStorage.removeItem("painel");
+                setAutorizado(false);
+                setMostrarPainel(false);
+              }}>Fechar</button>
             </>
           )}
         </div>
