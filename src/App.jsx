@@ -51,7 +51,10 @@ function App() {
     r.continuous = true;
 
     r.onresult = async (e) => {
-      const texto = e.results[e.results.length - 1][0].transcript;
+      const texto = e.results[e.results.length - 1][0].transcript
+        .toLowerCase()
+        .trim();
+
       setEscutando(false);
 
       const res = await fetch(URL_SERVIDOR, {
