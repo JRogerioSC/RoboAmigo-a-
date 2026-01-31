@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Canvas } from "@react-three/fiber";
 import Avatar from "./Avatar.jsx";
+import Login from "./Login.jsx";
 import "./App.css";
 
 const URL_RESPONDER = "https://servidor-robo-ia.onrender.com/responder";
 const URL_ENSINAR = "https://servidor-robo-ia.onrender.com/ensinar-audio";
 
-/* 🔐 ID ÚNICO */
-const getUsuarioId = () => {
-  let id = localStorage.getItem("usuarioId");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("usuarioId", id);
-  }
-  return id;
-};
-
 function App() {
-  const usuarioId = useRef(getUsuarioId());
+  const [usuarioId, setUsuarioId] = useState(
+    () => localStorage.getItem("usuarioId")
+  );
+  const usuarioIdRef = useRef(usuarioId);
+
+  useEffect(() => {
+    usuarioIdRef.current = usuarioId;
+  }, [usuarioId]);
 
   const [falando, setFalando] = useState(false);
   const [escutando, setEscutando] = useState(false);
@@ -52,10 +50,7 @@ function App() {
   /* 🎧 reconhecimento */
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      alert("Navegador não suporta reconhecimento de voz");
-      return;
-    }
+    if (!SR) return;
 
     const r = new SR();
     r.lang = "pt-BR";
@@ -67,8 +62,8 @@ function App() {
 
       const url = aguardandoEnsino ? URL_ENSINAR : URL_RESPONDER;
       const body = aguardandoEnsino
-        ? { usuarioId: usuarioId.current, resposta: texto }
-        : { usuarioId: usuarioId.current, texto };
+        ? { usuarioId: usuarioIdRef.current, resposta: texto }
+        : { usuarioId: usuarioIdRef.current, texto };
 
       const res = await fetch(url, {
         method: "POST",
@@ -77,14 +72,10 @@ function App() {
       });
 
       const data = await res.json();
-
       if (!data?.resposta) return;
 
-      if (/qual é a resposta/i.test(data.resposta)) {
-        setAguardandoEnsino(true);
-      } else if (/aprendi/i.test(data.resposta)) {
-        setAguardandoEnsino(false);
-      }
+      if (/qual é a resposta/i.test(data.resposta)) setAguardandoEnsino(true);
+      if (/aprendi/i.test(data.resposta)) setAguardandoEnsino(false);
 
       falar(data.resposta);
     };
@@ -104,21 +95,12 @@ function App() {
     u.lang = "pt-BR";
 
     const pt = voicesRef.current.filter(v => v.lang.includes("pt"));
-    u.voice =
-      genero === "feminino"
-        ? pt.find(v => /female|mulher/i.test(v.name)) || pt[0]
-        : pt[0];
+    u.voice = genero === "feminino"
+      ? pt.find(v => /female|mulher/i.test(v.name)) || pt[0]
+      : pt[0];
 
     u.onstart = () => setFalando(true);
-
-    u.onend = () => {
-      setFalando(false);
-
-      // ⚠️ só volta a ouvir se NÃO estiver ensinando
-      if (!aguardandoEnsino) {
-        setEscutando(false);
-      }
-    };
+    u.onend = () => setFalando(false);
 
     speechSynthesis.speak(u);
   };
@@ -128,6 +110,11 @@ function App() {
     localStorage.setItem("nomeIA", nomeIA);
     setNomeFixado(true);
   };
+
+  /* 🔐 LOGIN */
+  if (!usuarioId) {
+    return <Login onLogin={setUsuarioId} />;
+  }
 
   return (
     <div className="container">
@@ -150,11 +137,8 @@ function App() {
 
       {nomeFixado && (
         <button onClick={iniciarEscuta} disabled={escutando || falando}>
-          {aguardandoEnsino
-            ? "🎓 Diga a resposta"
-            : escutando
-              ? "🎙️ Ouvindo..."
-              : "🎤 Falar com o robô"}
+          {aguardandoEnsino ? "🎓 Diga a resposta" :
+            escutando ? "🎙️ Ouvindo..." : "🎤 Falar com o robô"}
         </button>
       )}
     </div>
