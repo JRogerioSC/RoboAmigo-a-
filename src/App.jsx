@@ -3,10 +3,10 @@ import { Canvas } from "@react-three/fiber";
 import Avatar from "./Avatar.jsx";
 import "./App.css";
 
-const URL_SERVIDOR = "https://servidor-robo-ia.onrender.com/responder";
-const URL_TREINAR = "https://servidor-robo-ia.onrender.com/treinar";
+const URL_RESPONDER = "https://servidor-robo-ia.onrender.com/responder";
+const URL_ENSINAR = "https://servidor-robo-ia.onrender.com/ensinar-audio";
 
-// 🔐 ID ÚNICO POR USUÁRIO
+/* 🔐 ID ÚNICO */
 const getUsuarioId = () => {
   let id = localStorage.getItem("usuarioId");
   if (!id) {
@@ -25,22 +25,15 @@ function App() {
   const [nomeIA, setNomeIA] = useState(() => localStorage.getItem("nomeIA") || "");
   const [nomeFixado, setNomeFixado] = useState(() => !!localStorage.getItem("nomeIA"));
 
-  const [mostrarPainel, setMostrarPainel] = useState(false);
-  const [senha, setSenha] = useState("");
-  const [autorizado, setAutorizado] = useState(
-    localStorage.getItem("painel") === "ok"
-  );
-
-  const [pergunta, setPergunta] = useState("");
-  const [respostaManual, setRespostaManual] = useState("");
+  const [aguardandoEnsino, setAguardandoEnsino] = useState(false);
 
   const recognitionRef = useRef(null);
   const voicesRef = useRef([]);
 
   const nomesFemininos = [
-    "ana", "maria", "julia", "juliana", "paula", "carla", "beatriz", "lucia",
-    "luiza", "mariana", "camila", "fernanda", "gabriela", "leticia", "rafaela",
-    "aline", "bruna", "daniela", "isabela", "sofia"
+    "ana", "maria", "julia", "juliana", "paula", "carla", "beatriz",
+    "lucia", "luiza", "mariana", "camila", "fernanda", "gabriela",
+    "leticia", "rafaela", "aline", "bruna", "daniela", "isabela", "sofia"
   ];
 
   const genero = useMemo(() => {
@@ -50,54 +43,66 @@ function App() {
     return "masculino";
   }, [nomeIA]);
 
-  // 🎙️ vozes
+  /* 🎙️ vozes */
   useEffect(() => {
     const load = () => (voicesRef.current = speechSynthesis.getVoices());
     load();
     speechSynthesis.onvoiceschanged = load;
   }, []);
 
-  // 🎧 reconhecimento
+  /* 🎧 reconhecimento */
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return alert("Navegador não suporta reconhecimento de voz");
+    if (!SR) {
+      alert("Navegador não suporta reconhecimento de voz");
+      return;
+    }
 
     const r = new SR();
     r.lang = "pt-BR";
-    r.continuous = true;
+    r.continuous = false;
 
     r.onresult = async (e) => {
-      const texto = e.results[e.results.length - 1][0].transcript
-        .toLowerCase()
-        .trim();
-
+      const texto = e.results[0][0].transcript.toLowerCase().trim();
       setEscutando(false);
 
-      const res = await fetch(URL_SERVIDOR, {
+      const url = aguardandoEnsino ? URL_ENSINAR : URL_RESPONDER;
+
+      const body = aguardandoEnsino
+        ? { usuarioId: usuarioId.current, resposta: texto }
+        : { usuarioId: usuarioId.current, texto };
+
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          texto,
-          usuarioId: usuarioId.current
-        })
+        body: JSON.stringify(body)
       });
 
       const data = await res.json();
 
-      if (data.resposta) falar(data.resposta);
-
+      if (data?.resposta) {
+        if (/qual é a resposta/i.test(data.resposta)) {
+          setAguardandoEnsino(true);
+        } else {
+          setAguardandoEnsino(false);
+        }
+        falar(data.resposta);
+      }
     };
 
     r.onend = () => {
       if (nomeFixado && !falando) {
         setTimeout(() => {
-          try { r.start(); setEscutando(true); } catch { }
+          try {
+            r.start();
+            setEscutando(true);
+          } catch { }
         }, 400);
       }
     };
 
     recognitionRef.current = r;
-  }, [nomeFixado, falando]);
+  }, [nomeFixado, falando, aguardandoEnsino]);
 
   const iniciarEscuta = () => {
     if (!nomeFixado || falando || escutando) return;
@@ -117,7 +122,10 @@ function App() {
         : pt[0];
 
     u.onstart = () => setFalando(true);
-    u.onend = () => { setFalando(false); iniciarEscuta(); };
+    u.onend = () => {
+      setFalando(false);
+      iniciarEscuta();
+    };
 
     speechSynthesis.speak(u);
   };
@@ -132,8 +140,11 @@ function App() {
     <div className="container">
       <h2>Nome do amigo(a)</h2>
 
-      <input value={nomeIA} disabled={nomeFixado}
-        onChange={e => setNomeIA(e.target.value)} />
+      <input
+        value={nomeIA}
+        disabled={nomeFixado}
+        onChange={e => setNomeIA(e.target.value)}
+      />
 
       {!nomeFixado && <button onClick={fixarNome}>Confirmar nome</button>}
       {nomeFixado && <p>✅ Nome fixado: {nomeIA}</p>}
@@ -146,56 +157,12 @@ function App() {
 
       {nomeFixado && (
         <button onClick={iniciarEscuta}>
-          {escutando ? "🎙️ Ouvindo..." : "🎤 Falar com o robô"}
+          {escutando
+            ? aguardandoEnsino
+              ? "🎓 Aprendendo..."
+              : "🎙️ Ouvindo..."
+            : "🎤 Falar com o robô"}
         </button>
-      )}
-
-      <div className="robo-flutuante" onClick={() => setMostrarPainel(true)}>🤖</div>
-
-      {mostrarPainel && (
-        <div className="painel">
-          {!autorizado ? (
-            <>
-              <input type="password" placeholder="Senha"
-                value={senha} onChange={e => setSenha(e.target.value)} />
-              <button onClick={() => {
-                if (senha === "689033rogerio") {
-                  localStorage.setItem("painel", "ok");
-                  setAutorizado(true);
-                  setSenha("");
-                } else alert("Senha errada");
-              }}>Entrar</button>
-            </>
-          ) : (
-            <>
-              <input placeholder="Pergunta"
-                value={pergunta} onChange={e => setPergunta(e.target.value)} />
-              <textarea placeholder="Resposta"
-                value={respostaManual} onChange={e => setRespostaManual(e.target.value)} />
-
-              <button onClick={async () => {
-                await fetch(URL_TREINAR, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    usuarioId: usuarioId.current,
-                    pergunta,
-                    resposta: respostaManual
-                  })
-                });
-                setPergunta("");
-                setRespostaManual("");
-                alert("Treinado!");
-              }}>Salvar</button>
-
-              <button onClick={() => {
-                localStorage.removeItem("painel");
-                setAutorizado(false);
-                setMostrarPainel(false);
-              }}>Fechar</button>
-            </>
-          )}
-        </div>
       )}
     </div>
   );
