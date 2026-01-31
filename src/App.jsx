@@ -8,6 +8,7 @@ const URL_RESPONDER = "https://servidor-robo-ia.onrender.com/responder";
 const URL_ENSINAR = "https://servidor-robo-ia.onrender.com/ensinar-audio";
 
 function App() {
+  /* ================= LOGIN ================= */
   const [usuarioId, setUsuarioId] = useState(
     () => localStorage.getItem("usuarioId")
   );
@@ -17,16 +18,22 @@ function App() {
     usuarioIdRef.current = usuarioId;
   }, [usuarioId]);
 
+  /* ================= ESTADOS ================= */
   const [falando, setFalando] = useState(false);
   const [escutando, setEscutando] = useState(false);
   const [aguardandoEnsino, setAguardandoEnsino] = useState(false);
 
-  const [nomeIA, setNomeIA] = useState(() => localStorage.getItem("nomeIA") || "");
-  const [nomeFixado, setNomeFixado] = useState(() => !!localStorage.getItem("nomeIA"));
+  const [nomeIA, setNomeIA] = useState(
+    () => localStorage.getItem("nomeIA") || ""
+  );
+  const [nomeFixado, setNomeFixado] = useState(
+    () => !!localStorage.getItem("nomeIA")
+  );
 
   const recognitionRef = useRef(null);
   const voicesRef = useRef([]);
 
+  /* ================= GÊNERO ================= */
   const nomesFemininos = [
     "ana", "maria", "julia", "juliana", "paula", "carla", "beatriz",
     "lucia", "luiza", "mariana", "camila", "fernanda", "gabriela",
@@ -36,18 +43,22 @@ function App() {
   const genero = useMemo(() => {
     if (!nomeIA) return "masculino";
     const n = nomeIA.toLowerCase();
-    if (nomesFemininos.some(v => n.includes(v)) || n.endsWith("a")) return "feminino";
+    if (nomesFemininos.some(v => n.includes(v)) || n.endsWith("a")) {
+      return "feminino";
+    }
     return "masculino";
   }, [nomeIA]);
 
-  /* 🎙️ vozes */
+  /* ================= VOZ ================= */
   useEffect(() => {
-    const load = () => (voicesRef.current = speechSynthesis.getVoices());
+    const load = () => {
+      voicesRef.current = speechSynthesis.getVoices();
+    };
     load();
     speechSynthesis.onvoiceschanged = load;
   }, []);
 
-  /* 🎧 reconhecimento */
+  /* ================= RECONHECIMENTO ================= */
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
@@ -74,8 +85,13 @@ function App() {
       const data = await res.json();
       if (!data?.resposta) return;
 
-      if (/qual é a resposta/i.test(data.resposta)) setAguardandoEnsino(true);
-      if (/aprendi/i.test(data.resposta)) setAguardandoEnsino(false);
+      if (/qual é a resposta/i.test(data.resposta)) {
+        setAguardandoEnsino(true);
+      }
+
+      if (/aprendi/i.test(data.resposta)) {
+        setAguardandoEnsino(false);
+      }
 
       falar(data.resposta);
     };
@@ -83,6 +99,7 @@ function App() {
     recognitionRef.current = r;
   }, [aguardandoEnsino]);
 
+  /* ================= FUNÇÕES ================= */
   const iniciarEscuta = () => {
     if (!nomeFixado || falando || escutando) return;
     recognitionRef.current.start();
@@ -95,9 +112,10 @@ function App() {
     u.lang = "pt-BR";
 
     const pt = voicesRef.current.filter(v => v.lang.includes("pt"));
-    u.voice = genero === "feminino"
-      ? pt.find(v => /female|mulher/i.test(v.name)) || pt[0]
-      : pt[0];
+    u.voice =
+      genero === "feminino"
+        ? pt.find(v => /female|mulher/i.test(v.name)) || pt[0]
+        : pt[0];
 
     u.onstart = () => setFalando(true);
     u.onend = () => setFalando(false);
@@ -111,13 +129,29 @@ function App() {
     setNomeFixado(true);
   };
 
-  /* 🔐 LOGIN */
+  /* ================= LOGOUT ================= */
+  const sair = () => {
+    localStorage.removeItem("usuarioId");
+    localStorage.removeItem("nomeIA");
+    setUsuarioId(null);
+    setNomeIA("");
+    setNomeFixado(false);
+    setAguardandoEnsino(false);
+  };
+
+  /* ================= TELA LOGIN ================= */
   if (!usuarioId) {
     return <Login onLogin={setUsuarioId} />;
   }
 
+  /* ================= TELA PRINCIPAL ================= */
   return (
     <div className="container">
+
+      <button className="logout-btn" onClick={sair}>
+        🚪 Sair
+      </button>
+
       <h2>Nome do amigo(a)</h2>
 
       <input
@@ -126,7 +160,10 @@ function App() {
         onChange={e => setNomeIA(e.target.value)}
       />
 
-      {!nomeFixado && <button onClick={fixarNome}>Confirmar nome</button>}
+      {!nomeFixado && (
+        <button onClick={fixarNome}>Confirmar nome</button>
+      )}
+
       {nomeFixado && <p>✅ Nome fixado: {nomeIA}</p>}
 
       <Canvas style={{ height: 300 }}>
@@ -137,8 +174,11 @@ function App() {
 
       {nomeFixado && (
         <button onClick={iniciarEscuta} disabled={escutando || falando}>
-          {aguardandoEnsino ? "🎓 Diga a resposta" :
-            escutando ? "🎙️ Ouvindo..." : "🎤 Falar com o robô"}
+          {aguardandoEnsino
+            ? "🎓 Diga a resposta"
+            : escutando
+              ? "🎙️ Ouvindo..."
+              : "🎤 Falar com o robô"}
         </button>
       )}
     </div>

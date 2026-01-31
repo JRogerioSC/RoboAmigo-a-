@@ -105,3 +105,24 @@ button {
     width: 100%;
     margin-bottom: 6px;
 }
+
+.container {
+    position: relative;
+}
+
+.logout-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: #d93636;
+}
