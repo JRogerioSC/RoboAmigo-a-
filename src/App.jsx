@@ -21,11 +21,10 @@ function App() {
 
   const [falando, setFalando] = useState(false);
   const [escutando, setEscutando] = useState(false);
+  const [aguardandoEnsino, setAguardandoEnsino] = useState(false);
 
   const [nomeIA, setNomeIA] = useState(() => localStorage.getItem("nomeIA") || "");
   const [nomeFixado, setNomeFixado] = useState(() => !!localStorage.getItem("nomeIA"));
-
-  const [aguardandoEnsino, setAguardandoEnsino] = useState(false);
 
   const recognitionRef = useRef(null);
   const voicesRef = useRef([]);
@@ -67,7 +66,6 @@ function App() {
       setEscutando(false);
 
       const url = aguardandoEnsino ? URL_ENSINAR : URL_RESPONDER;
-
       const body = aguardandoEnsino
         ? { usuarioId: usuarioId.current, resposta: texto }
         : { usuarioId: usuarioId.current, texto };
@@ -80,29 +78,19 @@ function App() {
 
       const data = await res.json();
 
-      if (data?.resposta) {
-        if (/qual é a resposta/i.test(data.resposta)) {
-          setAguardandoEnsino(true);
-        } else {
-          setAguardandoEnsino(false);
-        }
-        falar(data.resposta);
-      }
-    };
+      if (!data?.resposta) return;
 
-    r.onend = () => {
-      if (nomeFixado && !falando) {
-        setTimeout(() => {
-          try {
-            r.start();
-            setEscutando(true);
-          } catch { }
-        }, 400);
+      if (/qual é a resposta/i.test(data.resposta)) {
+        setAguardandoEnsino(true);
+      } else if (/aprendi/i.test(data.resposta)) {
+        setAguardandoEnsino(false);
       }
+
+      falar(data.resposta);
     };
 
     recognitionRef.current = r;
-  }, [nomeFixado, falando, aguardandoEnsino]);
+  }, [aguardandoEnsino]);
 
   const iniciarEscuta = () => {
     if (!nomeFixado || falando || escutando) return;
@@ -122,9 +110,14 @@ function App() {
         : pt[0];
 
     u.onstart = () => setFalando(true);
+
     u.onend = () => {
       setFalando(false);
-      iniciarEscuta();
+
+      // ⚠️ só volta a ouvir se NÃO estiver ensinando
+      if (!aguardandoEnsino) {
+        setEscutando(false);
+      }
     };
 
     speechSynthesis.speak(u);
@@ -156,12 +149,12 @@ function App() {
       </Canvas>
 
       {nomeFixado && (
-        <button onClick={iniciarEscuta}>
-          {escutando
-            ? aguardandoEnsino
-              ? "🎓 Aprendendo..."
-              : "🎙️ Ouvindo..."
-            : "🎤 Falar com o robô"}
+        <button onClick={iniciarEscuta} disabled={escutando || falando}>
+          {aguardandoEnsino
+            ? "🎓 Diga a resposta"
+            : escutando
+              ? "🎙️ Ouvindo..."
+              : "🎤 Falar com o robô"}
         </button>
       )}
     </div>
