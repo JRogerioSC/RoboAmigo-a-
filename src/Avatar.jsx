@@ -120,25 +120,41 @@ export default function Avatar({ genero, falando }) {
             </mesh>
 
             {/* =========================
-                CABELO FEMININO COMPRIDO
+                CABELO FEMININO + FRANJA
             ========================= */}
             {feminino && (
-                <group position={[0, 0.1, -0.05]}>
-                    {/* Parte de trás */}
+                <group>
+                    {/* Cabelo atrás */}
                     <mesh position={[0, -0.4, -0.5]}>
                         <capsuleGeometry args={[0.9, 1.4, 8, 16]} />
                         <meshStandardMaterial color="#3b2f2f" roughness={0.8} />
                     </mesh>
 
-                    {/* Mecha esquerda */}
+                    {/* Laterais */}
                     <mesh position={[-0.7, -0.3, 0.2]} rotation={[0, 0, 0.2]}>
                         <capsuleGeometry args={[0.18, 1.1, 6, 12]} />
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
 
-                    {/* Mecha direita */}
                     <mesh position={[0.7, -0.3, 0.2]} rotation={[0, 0, -0.2]}>
                         <capsuleGeometry args={[0.18, 1.1, 6, 12]} />
+                        <meshStandardMaterial color="#3b2f2f" />
+                    </mesh>
+
+                    {/* FRANJA NA TESTA */}
+                    <mesh position={[0, 0.55, 0.85]}>
+                        <boxGeometry args={[1.1, 0.35, 0.15]} />
+                        <meshStandardMaterial color="#3b2f2f" />
+                    </mesh>
+
+                    {/* Franjas laterais */}
+                    <mesh position={[-0.4, 0.45, 0.9]} rotation={[0, 0, 0.25]}>
+                        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
+                        <meshStandardMaterial color="#3b2f2f" />
+                    </mesh>
+
+                    <mesh position={[0.4, 0.45, 0.9]} rotation={[0, 0, -0.25]}>
+                        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
                 </group>
