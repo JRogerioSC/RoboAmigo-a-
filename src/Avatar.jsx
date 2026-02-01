@@ -1,175 +1,158 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
+import * as THREE from "three";
 
-export default function AvatarRealista({
-    falando,
-    humor = "neutro",
-    genero,
-    estado = "idle", // idle | andar | correr
-    velocidade = 0.02,
-}) {
+export default function Avatar({ genero, falando }) {
     const grupo = useRef();
-    const cabeca = useRef();
     const boca = useRef();
-    const sobrancelhaE = useRef();
-    const sobrancelhaD = useRef();
     const olhoE = useRef();
     const olhoD = useRef();
-    const bracoD = useRef();
-    const bracoE = useRef();
-    const pernaE = useRef();
-    const pernaD = useRef();
-    const tronco = useRef();
+    const pupilaE = useRef();
+    const pupilaD = useRef();
 
-    const feminino = genero === "feminino";
+    const bocaY = useRef(-0.35);
 
-    useFrame(({ clock }) => {
+    const blinkTimer = useRef(0);
+    const blinkingEye = useRef("both");
+
+    useFrame(({ clock }, delta) => {
         const t = clock.getElapsedTime();
 
-        const andando = estado === "andar";
-        const correndo = estado === "correr";
-
-        const freq = andando ? 6 : correndo ? 10 : 0;
-        const impacto = andando ? 0.08 : correndo ? 0.18 : 0;
-        const ampPerna = andando ? 0.9 : correndo ? 1.4 : 0;
-        const ampBraco = andando ? 0.6 : correndo ? 1.2 : 0;
-
-        const passo = Math.sin(t * freq);
-
-        /* Deslocamento */
-        if (grupo.current && (andando || correndo)) {
-            grupo.current.position.z -= velocidade * (correndo ? 2.2 : 1);
-            grupo.current.position.y = -1.8 + Math.abs(passo) * impacto;
-            grupo.current.rotation.x = correndo ? -0.15 : 0;
-        } else if (grupo.current) {
-            grupo.current.position.y = -1.8;
-            grupo.current.rotation.x = 0;
+        // =========================
+        // Cabeça – balanço natural
+        // =========================
+        if (grupo.current) {
+            grupo.current.rotation.y = Math.sin(t * 0.6) * 0.15;
+            grupo.current.rotation.x = Math.sin(t * 0.4 + 1) * 0.08;
         }
 
-        /* Pernas */
-        if (pernaE.current && pernaD.current) {
-            pernaE.current.rotation.x = passo * ampPerna;
-            pernaD.current.rotation.x = -passo * ampPerna;
-        }
-
-        /* Braços */
-        if (bracoE.current && bracoD.current) {
-            bracoE.current.rotation.x = -passo * ampBraco;
-            bracoD.current.rotation.x = passo * ampBraco;
-        }
-
-        /* Respiração */
-        if (tronco.current) {
-            tronco.current.scale.y =
-                1 + Math.sin(t * (correndo ? 3 : 1.5)) * (correndo ? 0.05 : 0.02);
-        }
-
-        /* Cabeça */
-        if (cabeca.current) {
-            cabeca.current.rotation.x =
-                falando && !correndo ? Math.sin(t * 3) * 0.08 : 0;
-            cabeca.current.rotation.y = Math.sin(t * 1.2) * 0.1;
-        }
-
-        /* Boca */
+        // =========================
+        // BOCA – FECHA UM POUCO ANTES DO ÁUDIO
+        // =========================
         if (boca.current) {
-            boca.current.scale.y = falando
-                ? 1.4 + Math.sin(t * 18) * 0.4
-                : humor === "feliz"
-                    ? 0.6
-                    : 0.25;
+            if (falando) {
+                const osc = Math.abs(Math.sin(t * 7));
+                const abertura = THREE.MathUtils.lerp(0.05, 0.40, osc);
+
+                boca.current.scale.y = THREE.MathUtils.lerp(
+                    boca.current.scale.y,
+                    abertura,
+                    0.45
+                );
+
+                boca.current.position.y = THREE.MathUtils.lerp(
+                    boca.current.position.y,
+                    bocaY.current - abertura * 0.18,
+                    0.45
+                );
+            } else {
+                // 🔥 FECHAMENTO MAIS RÁPIDO
+                boca.current.scale.y = THREE.MathUtils.lerp(
+                    boca.current.scale.y,
+                    0.08,
+                    0.20   // <<< maior = fecha antes
+                );
+
+                boca.current.position.y = THREE.MathUtils.lerp(
+                    boca.current.position.y,
+                    bocaY.current,
+                    0.20
+                );
+            }
         }
 
-        /* Sobrancelhas */
-        if (sobrancelhaE.current && sobrancelhaD.current) {
-            const expressao =
-                humor === "feliz" ? 0.15 : humor === "curioso" ? 0.25 : 0;
-            sobrancelhaE.current.position.y = 0.45 + expressao;
-            sobrancelhaD.current.position.y = 0.45 + expressao;
+
+        // =========================
+        // Olhos – piscar
+        // =========================
+        blinkTimer.current += delta;
+
+        if (blinkTimer.current > 2.5 + Math.random() * 3) {
+            blinkTimer.current = 0;
+            blinkingEye.current =
+                Math.random() < 0.15 ? "left" :
+                    Math.random() < 0.3 ? "right" :
+                        "both";
         }
 
-        /* Piscar */
-        const piscar = Math.sin(t * 2.8) > 0.96;
+        const closeTime = 0.08;
+        const openTime = 0.12;
+        const total = closeTime + openTime;
+
+        let blink = 0;
+        if (blinkTimer.current < total) {
+            if (blinkTimer.current < closeTime) {
+                blink = THREE.MathUtils.smoothstep(blinkTimer.current / closeTime, 0, 1);
+            } else {
+                blink = 1 - THREE.MathUtils.smoothstep(
+                    (blinkTimer.current - closeTime) / openTime,
+                    0,
+                    1
+                );
+            }
+        }
+
+        const eyeScale = THREE.MathUtils.lerp(1, 0.05, blink);
         if (olhoE.current && olhoD.current) {
-            olhoE.current.scale.y = piscar ? 0.1 : 1;
-            olhoD.current.scale.y = piscar ? 0.1 : 1;
+            olhoE.current.scale.y =
+                blinkingEye.current === "left" || blinkingEye.current === "both"
+                    ? eyeScale
+                    : 1;
+            olhoD.current.scale.y =
+                blinkingEye.current === "right" || blinkingEye.current === "both"
+                    ? eyeScale
+                    : 1;
+        }
+
+        // =========================
+        // Pupilas
+        // =========================
+        const lookX = Math.sin(t * 0.7) * 0.03;
+        const lookY = Math.sin(t * 0.9) * 0.02;
+
+        if (pupilaE.current && pupilaD.current) {
+            pupilaE.current.position.set(-0.35 + lookX, 0.18 + lookY, 0.95);
+            pupilaD.current.position.set(0.35 + lookX, 0.18 + lookY, 0.95);
         }
     });
 
+    const feminino = genero === "feminino";
+
     return (
-        <group ref={grupo} position={[0, -1.8, 0]}>
-            {/* Cabeça */}
-            <group ref={cabeca} position={[0, 3, 0]}>
-                <mesh>
-                    <sphereGeometry args={[0.75, 64, 64]} />
-                    <meshStandardMaterial
-                        color={feminino ? "#fbcfe8" : "#bfdbfe"}
-                        roughness={0.35}
-                    />
-                </mesh>
-
-                {/* Olhos */}
-                <mesh ref={olhoE} position={[-0.22, 0.2, 0.7]}>
-                    <sphereGeometry args={[0.09, 32, 32]} />
-                    <meshStandardMaterial color="white" />
-                </mesh>
-                <mesh ref={olhoD} position={[0.22, 0.2, 0.7]}>
-                    <sphereGeometry args={[0.09, 32, 32]} />
-                    <meshStandardMaterial color="white" />
-                </mesh>
-
-                {/* Pupilas */}
-                <mesh position={[-0.22, 0.18, 0.78]}>
-                    <sphereGeometry args={[0.04, 16, 16]} />
-                    <meshStandardMaterial color="#111" />
-                </mesh>
-                <mesh position={[0.22, 0.18, 0.78]}>
-                    <sphereGeometry args={[0.04, 16, 16]} />
-                    <meshStandardMaterial color="#111" />
-                </mesh>
-
-                {/* Sobrancelhas */}
-                <mesh ref={sobrancelhaE} position={[-0.22, 0.45, 0.72]}>
-                    <boxGeometry args={[0.2, 0.04, 0.05]} />
-                    <meshStandardMaterial color="#1f2937" />
-                </mesh>
-                <mesh ref={sobrancelhaD} position={[0.22, 0.45, 0.72]}>
-                    <boxGeometry args={[0.2, 0.04, 0.05]} />
-                    <meshStandardMaterial color="#1f2937" />
-                </mesh>
-
-                {/* Boca */}
-                <mesh ref={boca} position={[0, -0.35, 0.75]}>
-                    <boxGeometry args={[0.35, 0.1, 0.05]} />
-                    <meshStandardMaterial color="#111827" />
-                </mesh>
-            </group>
-
-            {/* Tronco */}
-            <mesh ref={tronco} position={[0, 1.7, 0]}>
-                <boxGeometry args={[1.1, 1.6, 0.6]} />
-                <meshStandardMaterial color={feminino ? "#ec4899" : "#2563eb"} />
+        <group ref={grupo}>
+            <mesh>
+                <sphereGeometry args={[1, 48, 48]} />
+                <meshStandardMaterial
+                    color={feminino ? "#f9a8d4" : "#60a5fa"}
+                    roughness={0.35}
+                />
             </mesh>
 
-            {/* Braços */}
-            <mesh ref={bracoE} position={[-1, 1.7, 0]}>
-                <boxGeometry args={[0.35, 1.3, 0.35]} />
-                <meshStandardMaterial color="#93c5fd" />
-            </mesh>
-            <mesh ref={bracoD} position={[1, 1.7, 0]}>
-                <boxGeometry args={[0.35, 1.3, 0.35]} />
-                <meshStandardMaterial color="#93c5fd" />
+            <mesh ref={olhoE} position={[-0.35, 0.2, 0.85]}>
+                <sphereGeometry args={[0.12, 32, 32]} />
+                <meshStandardMaterial color="white" />
             </mesh>
 
-            {/* Pernas */}
-            <mesh ref={pernaE} position={[-0.35, 0.3, 0]}>
-                <boxGeometry args={[0.4, 1.3, 0.4]} />
-                <meshStandardMaterial color="#1e3a8a" />
+            <mesh ref={olhoD} position={[0.35, 0.2, 0.85]}>
+                <sphereGeometry args={[0.12, 32, 32]} />
+                <meshStandardMaterial color="white" />
             </mesh>
-            <mesh ref={pernaD} position={[0.35, 0.3, 0]}>
-                <boxGeometry args={[0.4, 1.3, 0.4]} />
-                <meshStandardMaterial color="#1e3a8a" />
+
+            <mesh ref={pupilaE} position={[-0.35, 0.18, 0.95]}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="black" />
+            </mesh>
+
+            <mesh ref={pupilaD} position={[0.35, 0.18, 0.95]}>
+                <sphereGeometry args={[0.05, 16, 16]} />
+                <meshStandardMaterial color="black" />
+            </mesh>
+
+            <mesh ref={boca} position={[0, -0.35, 0.9]}>
+                <boxGeometry args={[0.45, 0.2, 0.05]} />
+                <meshStandardMaterial color="#111827" />
             </mesh>
         </group>
     );
 }
+
