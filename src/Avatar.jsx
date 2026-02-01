@@ -101,8 +101,8 @@ export default function Avatar({ genero, falando }) {
         const lookY = Math.sin(t * 0.9) * 0.02;
 
         if (pupilaE.current && pupilaD.current) {
-            pupilaE.current.position.set(-0.35 + lookX, 0.18 + lookY, 0.95);
-            pupilaD.current.position.set(0.35 + lookX, 0.18 + lookY, 0.95);
+            pupilaE.current.position.set(-0.35 + lookX, 0.18 + lookY, 1);
+            pupilaD.current.position.set(0.35 + lookX, 0.18 + lookY, 1);
         }
     });
 
@@ -119,9 +119,7 @@ export default function Avatar({ genero, falando }) {
                 />
             </mesh>
 
-            {/* =========================
-                CABELO FEMININO + FRANJA
-            ========================= */}
+            {/* CABELO FEMININO + FRANJA (NÃO TAMPA OLHOS) */}
             {feminino && (
                 <group>
                     {/* Cabelo atrás */}
@@ -141,42 +139,42 @@ export default function Avatar({ genero, falando }) {
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
 
-                    {/* FRANJA NA TESTA */}
-                    <mesh position={[0, 0.55, 0.85]}>
-                        <boxGeometry args={[1.1, 0.35, 0.15]} />
+                    {/* Franja central */}
+                    <mesh position={[0, 0.68, 0.65]}>
+                        <boxGeometry args={[1.05, 0.28, 0.12]} />
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
 
                     {/* Franjas laterais */}
-                    <mesh position={[-0.4, 0.45, 0.9]} rotation={[0, 0, 0.25]}>
-                        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
+                    <mesh position={[-0.42, 0.58, 0.7]} rotation={[0, 0, 0.25]}>
+                        <capsuleGeometry args={[0.1, 0.45, 4, 8]} />
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
 
-                    <mesh position={[0.4, 0.45, 0.9]} rotation={[0, 0, -0.25]}>
-                        <capsuleGeometry args={[0.12, 0.5, 4, 8]} />
+                    <mesh position={[0.42, 0.58, 0.7]} rotation={[0, 0, -0.25]}>
+                        <capsuleGeometry args={[0.1, 0.45, 4, 8]} />
                         <meshStandardMaterial color="#3b2f2f" />
                     </mesh>
                 </group>
             )}
 
-            {/* Olhos */}
-            <mesh ref={olhoE} position={[-0.35, 0.2, 0.85]}>
+            {/* Olhos (sempre à frente da franja) */}
+            <mesh ref={olhoE} position={[-0.35, 0.2, 0.9]}>
                 <sphereGeometry args={[0.12, 32, 32]} />
                 <meshStandardMaterial color="white" />
             </mesh>
 
-            <mesh ref={olhoD} position={[0.35, 0.2, 0.85]}>
+            <mesh ref={olhoD} position={[0.35, 0.2, 0.9]}>
                 <sphereGeometry args={[0.12, 32, 32]} />
                 <meshStandardMaterial color="white" />
             </mesh>
 
-            <mesh ref={pupilaE} position={[-0.35, 0.18, 0.95]}>
+            <mesh ref={pupilaE} position={[-0.35, 0.18, 1]}>
                 <sphereGeometry args={[0.05, 16, 16]} />
                 <meshStandardMaterial color="black" />
             </mesh>
 
-            <mesh ref={pupilaD} position={[0.35, 0.18, 0.95]}>
+            <mesh ref={pupilaD} position={[0.35, 0.18, 1]}>
                 <sphereGeometry args={[0.05, 16, 16]} />
                 <meshStandardMaterial color="black" />
             </mesh>
