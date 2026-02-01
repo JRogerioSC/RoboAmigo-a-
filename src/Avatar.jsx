@@ -18,17 +18,13 @@ export default function Avatar({ genero, falando }) {
     useFrame(({ clock }, delta) => {
         const t = clock.getElapsedTime();
 
-        // =========================
-        // Cabeça – balanço natural
-        // =========================
+        // Cabeça
         if (grupo.current) {
             grupo.current.rotation.y = Math.sin(t * 0.6) * 0.15;
             grupo.current.rotation.x = Math.sin(t * 0.4 + 1) * 0.08;
         }
 
-        // =========================
-        // BOCA – FECHA UM POUCO ANTES DO ÁUDIO
-        // =========================
+        // Boca
         if (boca.current) {
             if (falando) {
                 const osc = Math.abs(Math.sin(t * 7));
@@ -46,11 +42,10 @@ export default function Avatar({ genero, falando }) {
                     0.45
                 );
             } else {
-                // 🔥 FECHAMENTO MAIS RÁPIDO
                 boca.current.scale.y = THREE.MathUtils.lerp(
                     boca.current.scale.y,
                     0.08,
-                    0.20   // <<< maior = fecha antes
+                    0.20
                 );
 
                 boca.current.position.y = THREE.MathUtils.lerp(
@@ -61,10 +56,7 @@ export default function Avatar({ genero, falando }) {
             }
         }
 
-
-        // =========================
-        // Olhos – piscar
-        // =========================
+        // Piscar
         blinkTimer.current += delta;
 
         if (blinkTimer.current > 2.5 + Math.random() * 3) {
@@ -104,9 +96,7 @@ export default function Avatar({ genero, falando }) {
                     : 1;
         }
 
-        // =========================
         // Pupilas
-        // =========================
         const lookX = Math.sin(t * 0.7) * 0.03;
         const lookY = Math.sin(t * 0.9) * 0.02;
 
@@ -120,6 +110,7 @@ export default function Avatar({ genero, falando }) {
 
     return (
         <group ref={grupo}>
+            {/* Cabeça */}
             <mesh>
                 <sphereGeometry args={[1, 48, 48]} />
                 <meshStandardMaterial
@@ -128,6 +119,32 @@ export default function Avatar({ genero, falando }) {
                 />
             </mesh>
 
+            {/* =========================
+                CABELO FEMININO COMPRIDO
+            ========================= */}
+            {feminino && (
+                <group position={[0, 0.1, -0.05]}>
+                    {/* Parte de trás */}
+                    <mesh position={[0, -0.4, -0.5]}>
+                        <capsuleGeometry args={[0.9, 1.4, 8, 16]} />
+                        <meshStandardMaterial color="#3b2f2f" roughness={0.8} />
+                    </mesh>
+
+                    {/* Mecha esquerda */}
+                    <mesh position={[-0.7, -0.3, 0.2]} rotation={[0, 0, 0.2]}>
+                        <capsuleGeometry args={[0.18, 1.1, 6, 12]} />
+                        <meshStandardMaterial color="#3b2f2f" />
+                    </mesh>
+
+                    {/* Mecha direita */}
+                    <mesh position={[0.7, -0.3, 0.2]} rotation={[0, 0, -0.2]}>
+                        <capsuleGeometry args={[0.18, 1.1, 6, 12]} />
+                        <meshStandardMaterial color="#3b2f2f" />
+                    </mesh>
+                </group>
+            )}
+
+            {/* Olhos */}
             <mesh ref={olhoE} position={[-0.35, 0.2, 0.85]}>
                 <sphereGeometry args={[0.12, 32, 32]} />
                 <meshStandardMaterial color="white" />
@@ -148,6 +165,7 @@ export default function Avatar({ genero, falando }) {
                 <meshStandardMaterial color="black" />
             </mesh>
 
+            {/* Boca */}
             <mesh ref={boca} position={[0, -0.35, 0.9]}>
                 <boxGeometry args={[0.45, 0.2, 0.05]} />
                 <meshStandardMaterial color="#111827" />
@@ -155,4 +173,3 @@ export default function Avatar({ genero, falando }) {
         </group>
     );
 }
-
