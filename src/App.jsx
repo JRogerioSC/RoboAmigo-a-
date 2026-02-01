@@ -178,7 +178,7 @@ function App() {
             ? "🎓 Diga a resposta"
             : escutando
               ? "🎙️ Ouvindo..."
-              : "🎤 Falar com o robô"}
+              : "🎤 Falar com a iA"}
         </button>
       )}
     </div>
